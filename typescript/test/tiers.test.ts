@@ -261,6 +261,71 @@ function suite(spec: StoreSpec): void {
     expect(() => open({ embedder: {} as never })).toThrow(/embedder must have an embed method/);
   });
 
+  it.each([
+    ["INTERVAL", "string"],
+    ["  interval  ", "string"],
+    ["INTERVAL DAY TO SECOND(6)", "string"],
+    ["interval(3)", "string"],
+    ["POINT", "string"],
+    ["  PoInT  ", "string"],
+    ["POINT(1,2)", "string"],
+    ["intensity", "string"],
+    ["serializable", "string"],
+    ["SMALLINT", "integer"],
+    ["INTEGER", "integer"],
+    ["BIGINT", "integer"],
+    ["tinyint", "integer"],
+    ["mediumint", "integer"],
+    [" INT ", "integer"],
+    ["int2", "integer"],
+    ["int4", "integer"],
+    ["int8", "integer"],
+    ["INT64", "integer"],
+    ["INT(11) UNSIGNED", "integer"],
+    ["BIGINT UNSIGNED", "integer"],
+    ["SMALLSERIAL", "integer"],
+    ["SERIAL", "integer"],
+    ["BIGSERIAL", "integer"],
+    ["serial2", "integer"],
+    ["serial4", "integer"],
+    ["serial8", "integer"],
+    ["numeric(18,2)", "float"],
+    ["DECIMAL(10, 3)", "float"],
+    ["DOUBLE PRECISION", "float"],
+    ["FLOAT", "float"],
+    ["REAL", "float"],
+    ["timestamp", "datetime"],
+    ["boolean", "boolean"],
+    ["jsonb", "json"],
+    ["varchar(255)", "string"],
+    ["text", "string"],
+    [null, "string"],
+  ])("fromTables maps SQL type %s to %s", (sqlType, expected) => {
+    const schema = fromTables([{ name: "events", columns: [{ name: "value", type: sqlType }] }]);
+    expect(schema.entities[0]!.properties[0]!.type).toBe(expected);
+  });
+
+  it("fromTables accepts interval and point text under strict validation", async () => {
+    const schema = fromTables([
+      {
+        name: "events",
+        columns: [
+          { name: "duration", type: "INTERVAL" },
+          { name: "location", type: "POINT" },
+          { name: "count", type: "BIGINT" },
+        ],
+      },
+    ]);
+    const g = open({ schema, schema_mode: "strict" });
+    const properties = { duration: "1 day", location: "(1,2)", count: 2 };
+    const event = await g.entities.create("Meeting", "Event", { properties });
+    expect((await g.entities.get(event.id))!.properties).toEqual(properties);
+    await expect(
+      g.entities.create("Invalid", "Event", { properties: { ...properties, count: "two" } }),
+    ).rejects.toThrow(/property 'count' should be integer/);
+    expect(await g.entities.get("event:invalid")).toBeNull();
+  });
+
   it("fromTables drafts types, properties, relations, and mappings", async () => {
     const schema = fromTables(
       [

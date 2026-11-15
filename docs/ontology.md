@@ -86,5 +86,12 @@ schema = Schema.from_tables(
 | A column | A property with the nearest type, `required` when `nullable` is `False`. |
 | A column with `references` | A relation type `HAS_<COLUMN>` to the referenced table's type, with `from.max_count` 1. The `id` word is dropped from the name. |
 
+Integer inference matches the datatype name before whitespace or `(`, ignoring
+case and surrounding whitespace. It recognizes `tinyint`, `smallint`, `mediumint`,
+`int`, `integer`, `bigint`, the `int1/2/4/8/16/32/64/128/256` aliases, and
+`smallserial`, `serial`, `bigserial`, and `serial2/4/8`. Sizes and modifiers such as
+`INT(11) UNSIGNED` are allowed. Unsupported types such as `INTERVAL` and `POINT`
+use the `string` fallback.
+
 Nothing in a draft is certified. Review it, then set `certified` on what is
 right. A `references` to a table not in the list raises `ValidationError`.

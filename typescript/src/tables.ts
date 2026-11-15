@@ -9,7 +9,32 @@ const TYPES: ReadonlyArray<readonly [readonly string[], string]> = [
   [["bool"], "boolean"],
   [["json"], "json"],
   [["date", "time"], "datetime"],
-  [["int", "serial"], "integer"],
+  [
+    [
+      "tinyint",
+      "smallint",
+      "mediumint",
+      "int",
+      "integer",
+      "bigint",
+      "int1",
+      "int2",
+      "int4",
+      "int8",
+      "int16",
+      "int32",
+      "int64",
+      "int128",
+      "int256",
+      "smallserial",
+      "serial",
+      "bigserial",
+      "serial2",
+      "serial4",
+      "serial8",
+    ],
+    "integer",
+  ],
   [["float", "double", "real", "numeric", "decimal", "money"], "float"],
 ];
 const WORD = new RegExp(`[${PY_WORD_CLASS.replace("_", "")}]+`, "gu");
@@ -60,7 +85,9 @@ function typeNameOf(table: string): string {
  */
 function propertyType(sqlType: unknown): string {
   const text = sqlType ? pyStr(sqlType).toLowerCase() : "";
-  for (const [needles, mapped] of TYPES) if (needles.some((n) => text.includes(n))) return mapped;
+  const base = text.trim().split(/[\s(]/, 1)[0];
+  for (const [needles, mapped] of TYPES)
+    if (needles.some((n) => (mapped === "integer" ? n === base : text.includes(n)))) return mapped;
   return "string";
 }
 

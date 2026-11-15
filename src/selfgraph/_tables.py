@@ -13,7 +13,32 @@ _TYPES = (
     (("bool",), "boolean"),
     (("json",), "json"),
     (("date", "time"), "datetime"),
-    (("int", "serial"), "integer"),
+    (
+        (
+            "tinyint",
+            "smallint",
+            "mediumint",
+            "int",
+            "integer",
+            "bigint",
+            "int1",
+            "int2",
+            "int4",
+            "int8",
+            "int16",
+            "int32",
+            "int64",
+            "int128",
+            "int256",
+            "smallserial",
+            "serial",
+            "bigserial",
+            "serial2",
+            "serial4",
+            "serial8",
+        ),
+        "integer",
+    ),
     (("float", "double", "real", "numeric", "decimal", "money"), "float"),
 )
 
@@ -47,8 +72,9 @@ def _property_type(sql_type: Any) -> str:
     @return (str): the property type, string when nothing closer fits.
     """
     text = str(sql_type or "").lower()
+    base = re.split(r"[\s(]", text.strip(), maxsplit=1)[0]
     for needles, mapped in _TYPES:
-        if any(n in text for n in needles):
+        if any(n == base if mapped == "integer" else n in text for n in needles):
             return mapped
     return "string"
 

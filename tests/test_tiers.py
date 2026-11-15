@@ -250,6 +250,76 @@ def test_from_tables_drafts_types_properties_relations_and_mappings():
         Schema.from_tables([{}])
 
 
+@pytest.mark.parametrize(
+    ("sql_type", "expected"),
+    [
+        ("INTERVAL", "string"),
+        ("  interval  ", "string"),
+        ("INTERVAL DAY TO SECOND(6)", "string"),
+        ("interval(3)", "string"),
+        ("POINT", "string"),
+        ("  PoInT  ", "string"),
+        ("POINT(1,2)", "string"),
+        ("intensity", "string"),
+        ("serializable", "string"),
+        ("SMALLINT", "integer"),
+        ("INTEGER", "integer"),
+        ("BIGINT", "integer"),
+        ("tinyint", "integer"),
+        ("mediumint", "integer"),
+        (" INT ", "integer"),
+        ("int2", "integer"),
+        ("int4", "integer"),
+        ("int8", "integer"),
+        ("INT64", "integer"),
+        ("INT(11) UNSIGNED", "integer"),
+        ("BIGINT UNSIGNED", "integer"),
+        ("SMALLSERIAL", "integer"),
+        ("SERIAL", "integer"),
+        ("BIGSERIAL", "integer"),
+        ("serial2", "integer"),
+        ("serial4", "integer"),
+        ("serial8", "integer"),
+        ("numeric(18,2)", "float"),
+        ("DECIMAL(10, 3)", "float"),
+        ("DOUBLE PRECISION", "float"),
+        ("FLOAT", "float"),
+        ("REAL", "float"),
+        ("timestamp", "datetime"),
+        ("boolean", "boolean"),
+        ("jsonb", "json"),
+        ("varchar(255)", "string"),
+        ("text", "string"),
+        (None, "string"),
+    ],
+)
+def test_from_tables_maps_sql_types(sql_type, expected):
+    schema = Schema.from_tables([{"name": "events", "columns": [{"name": "value", "type": sql_type}]}])
+    assert schema.entities[0].properties[0].type == expected
+
+
+def test_from_tables_accepts_interval_and_point_text_under_strict_validation():
+    schema = Schema.from_tables(
+        [
+            {
+                "name": "events",
+                "columns": [
+                    {"name": "duration", "type": "INTERVAL"},
+                    {"name": "location", "type": "POINT"},
+                    {"name": "count", "type": "BIGINT"},
+                ],
+            }
+        ]
+    )
+    g = fresh_graph("tables", schema=schema, schema_mode="strict")
+    properties = {"duration": "1 day", "location": "(1,2)", "count": 2}
+    event = run(g.entities.create("Meeting", "Event", properties=properties))
+    assert run(g.entities.get(event.id)).properties == properties
+    with pytest.raises(ValidationError, match="property 'count' should be integer"):
+        run(g.entities.create("Invalid", "Event", properties={**properties, "count": "two"}))
+    assert run(g.entities.get("event:invalid")) is None
+
+
 def test_cli_mcp_and_settings_carry_the_level(capsys):
     g = fresh_graph("tier")
     run(g.insert.facts({"entities": [{"type": "Company", "name": "Acme"}]}))
